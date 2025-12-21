@@ -1,0 +1,11 @@
+__pycache__
+.venv
+.env
+.ipynb_checkpoints
+.vscode
+*.pyc
+*.keras
+*.h5
+models/*
+!models/.gitkeep
+.DS_Store
