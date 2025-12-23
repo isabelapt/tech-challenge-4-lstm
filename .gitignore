@@ -39,9 +39,12 @@ env/
 *.ckpt
 *.pth
 *.pt
-models/*
-!models/.gitkeep
-!models/README.md
+modelos/*
+!modelos/.gitkeep
+!modelos/README.md
+models/
+mlruns/
+mlflow.db
 
 # Testing
 .pytest_cache/
@@ -66,3 +69,5 @@ Thumbs.db
 # Docker
 *.tar
 .dockerignore
+
+infra

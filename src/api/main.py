@@ -1,3 +1,9 @@
+import os
+
+# Force CPU to avoid GPU driver/ptx issues in serving environment.
+os.environ.setdefault("CUDA_VISIBLE_DEVICES", "-1")
+os.environ.setdefault("TF_ENABLE_ONEDNN_OPTS", "0")
+
 from fastapi import FastAPI, HTTPException
 import tensorflow as tf
 import numpy as np
@@ -5,11 +11,11 @@ from pydantic import BaseModel
 from typing import List
 import joblib
 
-app = FastAPI(title="Previsor de Ações LSTM")
+app = FastAPI(title="Previsor de Ações LSTM", description="Tech Challenge Fase 4")
 
 # Carregar artefatos na inicialização (Padrão Singleton)
-model = tf.keras.models.load_model("models/lstm_mvp.keras")
-scaler = joblib.load("models/scaler.pkl")
+model = tf.keras.models.load_model("modelos/lstm_mvp.keras")
+scaler = joblib.load("modelos/scaler.pkl")
 
 class StockInput(BaseModel):
     # Espera uma lista de 60 valores float (preços dos últimos 60 dias)

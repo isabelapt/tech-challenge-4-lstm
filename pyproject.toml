@@ -3,7 +3,7 @@ name = "lstm-predict"
 version = "0.1.0"
 description = ""
 authors = [
-    {name = "Your Name",email = "you@example.com"}
+    {name = "Isabela",email = "isabelatrindade94@hotmail.com"}
 ]
 readme = "README.md"
 requires-python = ">=3.11"
@@ -12,10 +12,10 @@ dependencies = [
     "uvicorn (>=0.38.0,<0.39.0)",
     "scikit-learn (>=1.8.0,<2.0.0)",
     "pandas (>=2.3.3,<3.0.0)",
-    "numpy (>=2.4.0,<3.0.0)",
+    "numpy (>=1.26.0,<2.0.0)",
     "yfinance (>=0.2.66,<0.3.0)",
     "matplotlib (>=3.10.8,<4.0.0)",
-    "tensorflow (>=2.20.0,<3.0.0)",
+    "tensorflow (>=2.18.0,<2.19.0)",
     "python-dotenv (>=1.2.1,<2.0.0)",
     "python-multipart (>=0.0.21,<0.0.22)"
 ]
@@ -36,5 +36,6 @@ build-backend = "poetry.core.masonry.api"
 dev = [
     "ipykernel (>=7.1.0,<8.0.0)",
     "pytest (>=9.0.2,<10.0.0)",
-    "httpx (>=0.28.1,<0.29.0)"
+    "httpx (>=0.28.1,<0.29.0)",
+    "mlflow (>=3.8.0,<4.0.0)"
 ]

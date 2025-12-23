@@ -6,7 +6,7 @@ RUN pip install poetry && \
     poetry self add poetry-plugin-export
 COPY pyproject.toml poetry.lock ./
 # Exportar requirements do poetry para instalar via pip (mais leve no final)
-RUN poetry export -f requirements.txt --output requirements.txt --without-hashes
+RUN poetry export -f requirements.txt --output requirements.txt --without-hashes --only main
 
 # Stage 2: Runtime
 FROM python:3.11-slim
@@ -18,7 +18,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copiar código e modelos
 COPY src/ ./src/
-COPY models/ ./models/
+COPY modelos/ ./modelos/
 
 # Expor porta e rodar
 EXPOSE 8000
