@@ -42,9 +42,19 @@ env/
 modelos/*
 !modelos/.gitkeep
 !modelos/README.md
-models/
+models/*.keras
+models/*.pkl
+models/*.h5
 mlruns/
 mlflow.db
+
+# Data directories (can be regenerated)
+data/
+notebooks/data/
+notebooks/mlruns/
+
+# Keep documentation
+!docs/
 
 # Testing
 .pytest_cache/
@@ -70,4 +80,12 @@ Thumbs.db
 *.tar
 .dockerignore
 
-infra
+# Terraform 
+infra/terraform.tfvars
+infra/.terraform/
+infra/.terraform.lock.hcl
+infra/tfplan
+infra/*.tfstate*
+infra/crash.log
+
+
