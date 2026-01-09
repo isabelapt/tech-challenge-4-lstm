@@ -55,12 +55,23 @@ make docker-run
 - 📚 ReDoc: http://localhost:8000/redoc
 
 ### Testar a API
+
+**Teste Local:**
 ```bash
 # Terminal 1: Rodar API
 make run-local
 
 # Terminal 2: Testar com dados reais da AAPL
 make test-api
+```
+
+**Teste AWS (Load Balancer):**
+```bash
+# Opção 1: Modo interativo (solicita URL)
+make test-aws
+
+# Opção 2: URL direto
+make test-aws-url URL=http://lstm-alb-xxxx.sa-east-1.elb.amazonaws.com
 ```
 
 👉 **Guia completo:** [docs/api.md](docs/api.md)
@@ -79,9 +90,10 @@ make test-api
 
 ### 📖 Documentação Completa:
 
-1. **[docs/api.md](docs/api.md)** - API REST (endpoints, exemplos, troubleshooting)
+1. **[docs/api.md](docs/api.md)** - API REST (endpoints, exemplos, testes AWS, segurança)
 2. **[docs/model.md](docs/model.md)** - Modelo LSTM (arquitetura detalhada, matemática, tuning)
 3. **[docs/README.md](docs/README.md)** - Índice da documentação
+4. **[.env.example](.env.example)** - Template de variáveis de ambiente
 
 ---
 
@@ -179,6 +191,8 @@ make docker-run     # Rodar container localmente (porta 8000)
 # AWS
 make aws-login      # Autenticar no ECR
 make aws-push       # Build + Tag + Push para ECR
+make test-aws       # Testar API na AWS (modo interativo)
+make test-aws-url   # Testar API na AWS com URL específico
 make git-push       # Git add + commit + push
 ```
 
@@ -405,7 +419,174 @@ poetry run mlflow ui --port 5000
 
 ---
 
-## 📞 Suporte e Contato
+## � Segurança e Dados Sensíveis
+
+### ⚠️ Arquivos que NÃO devem subir para o Git
+
+O projeto já está configurado com `.gitignore` para proteger dados sensíveis:
+
+#### 1. Modelos Treinados (Arquivos Grandes)
+```
+models/                    # Modelos treinados (~2-50 MB)
+├── lstm_model.keras       # ❌ NÃO COMMITAR (arquivo grande)
+└── scaler.pkl             # ❌ NÃO COMMITAR
+```
+
+#### 2. Dados de Treinamento
+```
+data/                      # Dados brutos e processados
+notebooks/data/            # Cache do yfinance
+notebooks/mlruns/          # Experimentos MLflow
+```
+
+#### 3. Credenciais AWS
+```
+.env                       # ❌ NÃO COMMITAR (credenciais)
+.env.local                 # ❌ NÃO COMMITAR
+infra/terraform.tfvars     # ❌ NÃO COMMITAR (variáveis sensíveis)
+infra/.terraform/          # ❌ NÃO COMMITAR (estado local)
+infra/*.tfstate*           # ❌ NÃO COMMITAR (estado Terraform)
+```
+
+#### 4. Configurações IDE/Locais
+```
+.vscode/                   # Configurações pessoais do editor
+.idea/                     # Configurações PyCharm
+__pycache__/               # Cache Python
+*.log                      # Logs
+```
+
+### ✅ Como Configurar Dados Sensíveis Localmente
+
+#### Opção 1: Variáveis de Ambiente (Recomendado)
+
+**Crie um arquivo `.env` na raiz do projeto:**
+```bash
+# .env (NÃO COMMITAR)
+AWS_PROFILE=default
+AWS_REGION=sa-east-1
+AWS_ACCOUNT_ID=123456789012
+LOAD_BALANCER_URL=http://lstm-alb-xxxx.sa-east-1.elb.amazonaws.com
+```
+
+**Carregue no código:**
+```python
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+aws_account = os.getenv('AWS_ACCOUNT_ID')
+```
+
+#### Opção 2: AWS CLI Profile
+
+**Configure suas credenciais AWS:**
+```bash
+# Configurar credenciais (interativo)
+aws configure --profile lstm-api
+
+# Ou editar manualmente
+vim ~/.aws/credentials
+```
+
+**Conteúdo de `~/.aws/credentials`:**
+```ini
+[lstm-api]
+aws_access_key_id = SEU_ACCESS_KEY
+aws_secret_access_key = SUA_SECRET_KEY
+region = sa-east-1
+```
+
+**Usar no Makefile:**
+```bash
+make aws-login AWS_PROFILE=lstm-api
+```
+
+#### Opção 3: Terraform Variables
+
+**Crie `infra/terraform.tfvars` (NÃO COMMITAR):**
+```hcl
+aws_region     = "sa-east-1"
+project_name   = "lstm-api"
+environment    = "production"
+ecr_repository = "lstm-api"
+```
+
+### 🔐 Boas Práticas de Segurança
+
+1. **✅ SEMPRE** verifique antes de commitar:
+   ```bash
+   git status  # Ver arquivos staged
+   git diff    # Ver mudanças
+   ```
+
+2. **✅ NUNCA** commite:
+   - Credenciais AWS (access keys, secret keys)
+   - URLs de produção com tokens
+   - Arquivos `.env` ou `.tfvars`
+   - Modelos treinados (use Git LFS ou S3)
+
+3. **✅ USE** secrets managers para produção:
+   - AWS Secrets Manager
+   - AWS Systems Manager Parameter Store
+   - HashiCorp Vault
+
+4. **✅ ROTACIONE** credenciais regularmente:
+   ```bash
+   aws iam create-access-key --user-name lstm-api
+   aws iam delete-access-key --access-key-id OLD_KEY
+   ```
+
+### 📦 Como Compartilhar Modelos Treinados
+
+**Opção 1: AWS S3 (Recomendado para produção)**
+```bash
+# Upload
+aws s3 cp models/lstm_model.keras s3://seu-bucket/models/
+aws s3 cp models/scaler.pkl s3://seu-bucket/models/
+
+# Download (outro dev)
+aws s3 cp s3://seu-bucket/models/lstm_model.keras models/
+aws s3 cp s3://seu-bucket/models/scaler.pkl models/
+```
+
+**Opção 2: Git LFS (para arquivos grandes)**
+```bash
+# Instalar Git LFS
+git lfs install
+
+# Rastrear modelos
+git lfs track "*.keras"
+git lfs track "*.pkl"
+
+# Commitar normalmente
+git add .gitattributes models/
+git commit -m "Add trained models"
+```
+
+**Opção 3: Google Drive/Dropbox (desenvolvimento)**
+- Compartilhe link do arquivo
+- Equipe baixa manualmente para `models/`
+
+### 🚨 Vazou Credenciais no Git?
+
+**Ação Imediata:**
+```bash
+# 1. Rotacionar credenciais IMEDIATAMENTE
+aws iam create-access-key --user-name seu-usuario
+aws iam delete-access-key --access-key-id CHAVE_VAZADA
+
+# 2. Remover do histórico Git (use git-filter-repo)
+pip install git-filter-repo
+git filter-repo --path .env --invert-paths
+
+# 3. Force push (CUIDADO: coordene com equipe)
+git push origin --force --all
+```
+
+---
+
+## �📞 Suporte e Contato
 
 ### Para Diferentes Perfis
 
@@ -427,6 +608,8 @@ poetry run mlflow ui --port 5000
 1. **API não inicia:** Verifique se porta 8000 está livre
 2. **Erro de modelo:** Certifique-se que `models/lstm_model.keras` existe
 3. **MLflow não abre:** Verifique se está no diretório `notebooks/`
+4. **Credenciais AWS:** Configure via `aws configure` ou arquivo `.env`
+5. **Load Balancer URL:** Obtenha no AWS Console (EC2 → Load Balancers)
 
 ---
 

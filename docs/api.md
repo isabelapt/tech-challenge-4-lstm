@@ -199,7 +199,265 @@ SYMBOL = 'TSLA'  # AAPL, PETR4.SA, MSFT, etc.
 
 ---
 
-## 🐛 Troubleshooting
+## 🌐 Testando na AWS (Load Balancer)
+
+Após fazer deploy no AWS ECS com Application Load Balancer, você pode testar a API em produção.
+
+### Pré-requisitos
+
+1. **Load Balancer URL**: Obtenha o DNS do ALB via:
+   - **AWS Console**: EC2 → Load Balancers → copie o "DNS name"
+   - **AWS CLI**: `aws elbv2 describe-load-balancers --query 'LoadBalancers[0].DNSName'`
+   - **Terraform**: `terraform output alb_dns_name`
+
+2. **Exemplo de URL**: `http://lstm-alb-74942114.sa-east-1.elb.amazonaws.com`
+
+### Métodos de Teste
+
+#### Opção 1: Modo Interativo (Recomendado)
+
+```bash
+make test-aws
+# Solicitará a URL do Load Balancer
+# Digite: http://lstm-alb-xxxx.sa-east-1.elb.amazonaws.com
+```
+
+#### Opção 2: URL Direto (Mais Rápido)
+
+```bash
+make test-aws-url URL=http://lstm-alb-74942114.sa-east-1.elb.amazonaws.com
+```
+
+#### Opção 3: Script Python Direto
+
+```bash
+poetry run python src/scripts/teste_aws.py http://lstm-alb-xxxx.sa-east-1.elb.amazonaws.com
+```
+
+### Saída Esperada
+
+```
+======================================================================
+🌐 TESTANDO API NA AWS COM AAPL
+======================================================================
+URL: http://lstm-alb-74942114.sa-east-1.elb.amazonaws.com/predict
+
+📥 Baixando últimos 90 dias de AAPL...
+✓ Dados baixados: 63 dias
+✓ Preparados 60 dias
+
+📊 Exemplo de dados (último dia):
+   Open:       $256.99
+   High:       $259.28
+   Low:        $255.70
+   Close:      $259.04
+   Volume:     50,211,734
+   Adj Close:  $259.04
+
+🚀 Enviando requisição para AWS...
+
+✅ RESPOSTA DA API AWS:
+======================================================================
+   Previsão:      $256.16
+   Preço atual:   $259.04
+   Variação:      $-2.88 (-1.11%)
+======================================================================
+
+🌐 API AWS funcionando corretamente!
+```
+
+### Como Funciona
+
+O script [teste_aws.py](../src/scripts/teste_aws.py):
+
+1. **Baixa dados reais** da AAPL via `yfinance` (últimos 90 dias)
+2. **Prepara payload** com 60 dias no formato correto `[Open, High, Low, Close, Volume, Adj Close]`
+3. **Envia requisição** para o Load Balancer AWS com timeout de 30s
+4. **Exibe resultado** com previsão, preço atual e variação percentual
+
+### Personalizar Ação
+
+Para testar com outra ação, edite [teste_aws.py](../src/scripts/teste_aws.py):
+
+```python
+# Linha 4: Alterar símbolo
+SYMBOL = 'TSLA'  # ou 'PETR4.SA', 'MSFT', etc.
+```
+
+### Troubleshooting AWS
+
+#### ❌ Connection refused / Timeout
+
+**Possíveis causas:**
+- Load Balancer não está rodando
+- Security Group não permite tráfego na porta 8000
+- Target Group não está healthy
+- URL incorreta
+
+**Soluções:**
+```bash
+# 1. Verificar status do Target Group
+aws elbv2 describe-target-health \
+  --target-group-arn <seu-tg-arn>
+
+# 2. Verificar Security Group permite porta 8000
+aws ec2 describe-security-groups \
+  --group-ids <seu-sg-id>
+
+# 3. Verificar logs do container
+aws logs tail /ecs/lstm-api --follow
+```
+
+#### ❌ HTTP 502 Bad Gateway
+
+**Causa**: Container não está rodando ou health check falhou
+
+**Solução**:
+```bash
+# Verificar tasks rodando
+aws ecs list-tasks --cluster <seu-cluster>
+
+# Ver logs de erros
+aws logs tail /ecs/lstm-api --since 10m
+```
+
+#### ❌ HTTP 500 Internal Server Error
+
+**Causa**: Erro no código da API ou modelo não carregado
+
+**Solução**: Ver logs do CloudWatch para stack trace completo
+
+---
+
+## � Segurança e Configuração AWS
+
+### Configurando Credenciais AWS
+
+**NUNCA** hardcode credenciais AWS no código. Use um dos métodos seguros:
+
+#### Método 1: AWS CLI Profile (Recomendado)
+
+```bash
+# Configurar profile
+aws configure --profile lstm-api
+# Digite: Access Key, Secret Key, Region (sa-east-1)
+
+# Usar com Makefile
+make aws-login AWS_PROFILE=lstm-api
+make aws-push AWS_PROFILE=lstm-api
+```
+
+#### Método 2: Variáveis de Ambiente
+
+**Criar arquivo `.env` (NÃO commitar):**
+```bash
+AWS_ACCESS_KEY_ID=seu_access_key
+AWS_SECRET_ACCESS_KEY=sua_secret_key
+AWS_REGION=sa-east-1
+AWS_ACCOUNT_ID=123456789012
+LOAD_BALANCER_URL=http://lstm-alb-xxxx.sa-east-1.elb.amazonaws.com
+```
+
+**Carregar no script Python:**
+```python
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+aws_account = os.getenv('AWS_ACCOUNT_ID')
+lb_url = os.getenv('LOAD_BALANCER_URL')
+```
+
+#### Método 3: IAM Roles (Produção)
+
+**Para EC2/ECS:**
+- Attach IAM Role à task/instance
+- Não precisa de credenciais explícitas
+- AWS SDK detecta automaticamente
+
+```python
+import boto3
+
+# Sem credenciais hardcoded - usa IAM Role
+s3 = boto3.client('s3')
+ecr = boto3.client('ecr')
+```
+
+### Obtendo URL do Load Balancer
+
+**Método 1: AWS Console**
+1. Acesse EC2 → Load Balancers
+2. Selecione seu ALB
+3. Copie o **DNS name**
+
+**Método 2: AWS CLI**
+```bash
+aws elbv2 describe-load-balancers \
+  --region sa-east-1 \
+  --query 'LoadBalancers[?LoadBalancerName==`lstm-alb`].DNSName' \
+  --output text
+```
+
+**Método 3: Terraform Output**
+```bash
+cd infra/
+terraform output alb_dns_name
+```
+
+### Arquivo .env.example (Template)
+
+**Crie `.env.example` para compartilhar com equipe (SEM valores reais):**
+```bash
+# AWS Configuration
+AWS_PROFILE=default
+AWS_REGION=sa-east-1
+AWS_ACCOUNT_ID=your_account_id_here
+
+# API Configuration
+LOAD_BALANCER_URL=http://your-alb.elb.amazonaws.com
+
+# MLflow (opcional)
+MLFLOW_TRACKING_URI=http://localhost:5000
+```
+
+**Cada dev copia e preenche:**
+```bash
+cp .env.example .env
+vim .env  # Preencher com valores reais
+```
+
+### Testando AWS sem Expor Credenciais
+
+**Script teste_aws.py já está seguro:**
+- ✅ Solicita URL interativamente (não hardcoded)
+- ✅ Aceita URL via argumento CLI
+- ✅ Não armazena credenciais
+
+```bash
+# Modo seguro (solicita URL)
+make test-aws
+
+# Ou com variável de ambiente
+export LOAD_BALANCER_URL=http://lstm-alb-xxx.elb.amazonaws.com
+poetry run python src/scripts/teste_aws.py $LOAD_BALANCER_URL
+```
+
+### Checklist de Segurança
+
+- [ ] `.env` está no `.gitignore`
+- [ ] `terraform.tfvars` está no `.gitignore`
+- [ ] Credenciais AWS configuradas via CLI profile
+- [ ] Modelos não commitados (ou via Git LFS)
+- [ ] URLs de produção não hardcoded
+- [ ] IAM roles com least privilege
+- [ ] Security Groups permitem apenas portas necessárias
+- [ ] Load Balancer com HTTPS (certificado SSL)
+- [ ] API com rate limiting (produção)
+- [ ] Logs sem informações sensíveis
+
+---
+
+## �🐛 Troubleshooting
 
 ### Erro: "Connection refused"
 - **Causa**: API não está rodando

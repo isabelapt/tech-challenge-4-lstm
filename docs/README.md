@@ -13,6 +13,7 @@
 - Endpoints disponíveis (`/` e `/predict`)
 - Formato de entrada/saída
 - Exemplos práticos (Python, cURL, JavaScript)
+- Testes AWS com Load Balancer
 - Troubleshooting
 - Métricas de latência
 - Validação de dados
@@ -35,6 +36,8 @@
 **Quando usar:** Quando precisar entender, retreinar ou melhorar o modelo
 
 ---
+
+
 
 ## 🚀 Fluxo de Leitura Recomendado
 
@@ -82,7 +85,7 @@ docs/
 | Necessidade | Link Direto |
 |-------------|-------------|
 | Rodar API localmente | [README - Quick Start](../README.md#🚀-quick-start---api) |
-| Testar API | [API - Exemplos](api.md#🧪-exemplos-de-uso) |
+| Testar API na AWS | [API - Testes AWS](api.md#🌐-testando-na-aws-load-balancer) |
 | Entender arquitetura | [Model - Arquitetura](model.md#📐-arquitetura-detalhada) |
 | Treinar novo modelo | [Model - Treinamento](model.md#🎯-treinamento-via-notebook) |
 | Fazer tuning | [Model - Tuning](model.md#🔧-dicas-de-hyperparameter-tuning) |
@@ -123,6 +126,9 @@ docs/
 
 ### Performance ruim?
 → Ver [Model - Hyperparameter Tuning](model.md#🔧-dicas-de-hyperparameter-tuning)
+
+### Como configurar .env?
+→ Ver [README - Segurança](../README.md#🔒-segurança-e-dados-sensíveis)
 
 ---
 

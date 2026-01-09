@@ -8,11 +8,27 @@ AWS_PROFILE?=default
 
 help:
 	@echo "=== LSTM API Makefile ==="
-	@echo "Poetry: setup, train, run-local, test-api"
-	@echo "Docker: docker-build, docker-run"
-	@echo "AWS: aws-login, aws-push"
-	@echo "Terraform: tf-init, tf-validate, tf-plan, tf-apply, tf-destroy"
-	@echo "Orquestração: deploy-all"
+	@echo ""
+	@echo "📦 Setup:"
+	@echo "  setup          - Instalar dependências com Poetry"
+	@echo ""
+	@echo "🚀 Desenvolvimento:"
+	@echo "  run-local      - Iniciar API localmente (porta 8000)"
+	@echo "  test-api       - Testar API local com dados da AAPL"
+	@echo ""
+	@echo "🐳 Docker:"
+	@echo "  docker-build   - Build da imagem Docker"
+	@echo "  docker-run     - Rodar container localmente"
+	@echo ""
+	@echo "☁️  AWS:"
+	@echo "  aws-login      - Autenticar no ECR"
+	@echo "  aws-push       - Build + Push para ECR"
+	@echo "  test-aws       - Testar API na AWS (pede URL interativa)"
+	@echo "  test-aws-url   - Testar API na AWS com URL"
+	@echo "                   Uso: make test-aws-url URL=http://load-balancer.com"
+	@echo ""
+	@echo "📝 Git:"
+	@echo "  git-push       - Add + Commit + Push"
 
 # ===== PYTHON / POETRY =====
 setup:
@@ -25,7 +41,16 @@ run-local:
 	poetry run uvicorn src.api.main:app --host 0.0.0.0 --port 8000
 
 test-api:
-	poetry run python src/scripts/teste_local.py
+	poetry run python tests/teste_local.py
+
+test-aws:
+	@echo "Testando API na AWS..."
+	@poetry run python tests/teste_aws.py
+
+test-aws-url:
+	@echo "Testando API na AWS com URL específica..."
+	@echo "Uso: make test-aws-url URL=http://seu-load-balancer.elb.amazonaws.com"
+	@poetry run python tests/teste_aws.py $(URL)
 
 # ===== DOCKER =====
 docker-build:

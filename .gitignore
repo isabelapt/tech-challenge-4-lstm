@@ -42,7 +42,9 @@ env/
 modelos/*
 !modelos/.gitkeep
 !modelos/README.md
-models/
+models/*.keras
+models/*.pkl
+models/*.h5
 mlruns/
 mlflow.db
 
