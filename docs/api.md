@@ -132,34 +132,27 @@ curl -X POST http://localhost:8000/predict \
   }'
 ```
 
-### Exemplo 3: JavaScript/Node.js
+### Exemplo 3: Usar Payload Pronto (Rápido)
 
-```javascript
-const axios = require('axios');
-const yf = require('yahoo-finance2').default;
+Existe um arquivo pronto com 60 dias de dados para testes rápidos:
 
-async function predictStock(symbol) {
-  // Baixar dados
-  const data = await yf.historical(symbol, {
-    period1: '2023-10-01',
-    interval: '1d'
-  });
-  
-  // Preparar últimos 60 dias
-  const last60 = data.slice(-60).map(d => [
-    d.open, d.high, d.low, d.close, d.volume, d.adjClose
-  ]);
-  
-  // Fazer previsão
-  const response = await axios.post('http://localhost:8000/predict', {
-    last_60_days: last60
-  });
-  
-  console.log(`Previsão: $${response.data.prediction.toFixed(2)}`);
-}
-
-predictStock('AAPL');
+```bash
+# Copiar payload do arquivo
+cat tests/payload.txt | curl -X POST http://localhost:8000/predict \
+  -H "Content-Type: application/json" \
+  -d @-
 ```
+
+Ou salvar em um arquivo e usar:
+
+```bash
+# Usar arquivo como payload
+curl -X POST http://localhost:8000/predict \
+  -H "Content-Type: application/json" \
+  -d @tests/payload.txt
+```
+
+**Arquivo:** [`tests/payload.txt`](../tests/payload.txt) - Contém exemplo completo dos 60 dias pronto para copiar
 
 ---
 
@@ -177,7 +170,7 @@ poetry run python src/scripts/teste_local.py
 
 **Para testar outras ações**, edite `src/scripts/teste_local.py` linha 6:
 ```python
-SYMBOL = 'TSLA'  # AAPL, PETR4.SA, MSFT, etc.
+SYMBOL = 'PETR4.SA'  # AAPL, PETR4.SA, MSFT, etc.
 ```
 
 ---
