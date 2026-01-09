@@ -46,6 +46,14 @@ models/
 mlruns/
 mlflow.db
 
+# Data directories (can be regenerated)
+data/
+notebooks/data/
+notebooks/mlruns/
+
+# Keep documentation
+!docs/
+
 # Testing
 .pytest_cache/
 .coverage
@@ -70,4 +78,12 @@ Thumbs.db
 *.tar
 .dockerignore
 
-infra
+# Terraform 
+infra/terraform.tfvars
+infra/.terraform/
+infra/.terraform.lock.hcl
+infra/tfplan
+infra/*.tfstate*
+infra/crash.log
+
+

@@ -1,9 +1,3 @@
-import os
-
-# Force CPU to avoid GPU driver/ptx issues in serving environment.
-os.environ.setdefault("CUDA_VISIBLE_DEVICES", "-1")
-os.environ.setdefault("TF_ENABLE_ONEDNN_OPTS", "0")
-
 from fastapi import FastAPI, HTTPException
 import tensorflow as tf
 import numpy as np
@@ -14,34 +8,42 @@ import joblib
 app = FastAPI(title="Previsor de Ações LSTM", description="Tech Challenge Fase 4")
 
 # Carregar artefatos na inicialização (Padrão Singleton)
-model = tf.keras.models.load_model("modelos/lstm_mvp.keras")
-scaler = joblib.load("modelos/scaler.pkl")
+model = tf.keras.models.load_model("models/lstm_model.keras")
+scaler = joblib.load("models/scaler.pkl")
 
 class StockInput(BaseModel):
-    # Espera uma lista de 60 valores float (preços dos últimos 60 dias)
-    last_60_days: List[float]
+    # Espera uma lista de 60 dias, cada dia com 6 features [Open, High, Low, Close, Volume, Adj Close]
+    last_60_days: List[List[float]]
     
 @app.get("/")
 def home():
-    return {"status": "ok", "model": "LSTM V1", "message": "API LSTM rodando! Use /predict"}
+    return {"status": "ok", "model": "LSTM V1.20260108.22H27m", "message": "API LSTM rodando! Use /predict"}
 
 @app.post("/predict")
 def predict(data: StockInput):
     if len(data.last_60_days) != 60:
         raise HTTPException(status_code=400, detail="Forneça exatamente 60 dias de dados.")
     
-    # Prepara os dados
-    input_data = np.array(data.last_60_days).reshape(-1, 1)
+    # Validar que cada dia tem 6 features
+    if not all(len(day) == 6 for day in data.last_60_days):
+        raise HTTPException(status_code=400, detail="Cada dia deve conter 6 features: [Open, High, Low, Close, Volume, Adj Close]")
+    
+    # Prepara os dados: shape (60, 6)
+    input_data = np.array(data.last_60_days)
     scaled_input = scaler.transform(input_data)
     
-    # Reshape para (1, 60, 1)
-    final_input = scaled_input.reshape(1, 60, 1)
+    # Reshape para (1, 60, 6) - batch_size=1, timesteps=60, features=6
+    final_input = scaled_input.reshape(1, 60, 6)
     
-    # Predição
+    # Predição (retorna valor normalizado de Close)
     prediction_scaled = model.predict(final_input)
-    prediction = scaler.inverse_transform(prediction_scaled)
     
-    return {"prediction": float(prediction[0][0])}
+    # Denormalizar: criar array com 6 features, Close na posição 3
+    dummy_features = np.zeros((1, 6))
+    dummy_features[0, 3] = prediction_scaled[0, 0]  # Close na coluna 3
+    prediction_denorm = scaler.inverse_transform(dummy_features)
+    
+    return {"prediction": float(prediction_denorm[0, 3])}
 
 if __name__ == "__main__":
     import uvicorn

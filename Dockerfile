@@ -18,7 +18,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copiar código e modelos
 COPY src/ ./src/
-COPY modelos/ ./modelos/
+COPY models/ ./models/
 
 # Expor porta e rodar
 EXPOSE 8000
